@@ -18,20 +18,84 @@ function getDB() {
 // ==========================================
 // 🌐 1. 網頁路由與初始化
 // ==========================================
+// 處理 GET 請求
 function doGet(e) {
-  // 如果網址沒有帶 unit 參數，預設給 Unit 1 (或任何提示文字)
-  var targetUnit = 'Unit 1';
-  if (e && e.parameter && e.parameter.unit) {
-    targetUnit = e.parameter.unit;
-  }
-  
-  // 建立 HTML 模板，注意這裡的檔名必須跟你的 HTML 檔名一致 (例如 'Index')
-  var template = HtmlService.createTemplateFromFile('Index');
-  template.currentUnit = targetUnit; 
-  
-  return template.evaluate()
+  // 檢查是否有 'action' 參數，若有則視為 API 請求
+  if (e.parameter.action) {
+    try {
+      let result;
+      const action = e.parameter.action;
+
+      // 根據 action 決定要執行哪個函式
+      switch (action) {
+        case 'getQuestions':
+          const unit = e.parameter.unit;
+          if (!unit) throw new Error("Parameter 'unit' is required for getQuestions action.");
+          result = getQuestions(unit);
+          break;
+        case 'getAvailableUnits':
+          result = getAvailableUnits();
+          break;
+        default:
+          // 為了 docs/app.js 的範例，我們也處理一個簡單的 GET
+          result = { message: "Hello from GAS API!", timestamp: new Date().toISOString() };
+          break;
+      }
+
+      // 將執行結果以 JSON 格式回傳
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: 'success', data: result }))
+        .setMimeType(ContentService.MimeType.JSON);
+
+    } catch (error) {
+      // 處理錯誤，回傳錯誤訊息
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: 'error', message: error.toString() }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  } else {
+    // --- 如果沒有 action，維持原本的 Web App 邏輯 ---
+    var targetUnit = 'Unit 1';
+    if (e && e.parameter && e.parameter.unit) {
+      targetUnit = e.parameter.unit;
+    }
+    
+    // 建立 HTML 模板，注意這裡的檔名必須跟你的 HTML 檔名一致 (例如 'Index')
+    var template = HtmlService.createTemplateFromFile('Index');
+    template.currentUnit = targetUnit; 
+    
+    return template.evaluate()
       .setTitle('🌟 MyView Online Quiz 🌟')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+}
+
+// 處理 POST 請求 (API Only)
+function doPost(e) {
+  try {
+    // 解析從客戶端傳來的 JSON 字串 (來自 e.postData.contents)
+    const payload = JSON.parse(e.postData.contents);
+    let result;
+
+    // 根據 payload 中的 action 決定要執行哪個函式
+    if (payload.action === 'submitAnswers') {
+      // submitAnswers 函式需要 payload.data
+      result = submitAnswers(payload.data);
+    } else {
+      throw new Error(`Unknown POST action: ${payload.action}`);
+    }
+
+    // 將執行結果以 JSON 格式回傳
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'success', data: result }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    // 處理錯誤，回傳錯誤訊息
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'error', message: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 // ==========================================
