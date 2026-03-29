@@ -694,33 +694,38 @@
 
             // Review Container
             const reviewContainer = document.getElementById('review-container');
-            reviewContainer.innerHTML = "";
             
             // 先加上題號，再依照正確與否排序 (false 放前面)
             const sortedDetails = resultData.details
                 .map((item, idx) => ({ ...item, qNum: idx + 1 }))
                 .sort((a, b) => (a.correct === b.correct) ? 0 : a.correct ? 1 : -1);
 
-            sortedDetails.forEach((item) => {
+            // 優化：先組好所有 HTML 再一次渲染
+            const reviewHTML = sortedDetails.map((item) => {
                 const isCorrect = item.correct;
                 const icon = isCorrect ? "✅" : "❌";
                 const colorClass = isCorrect ? "text-green-500" : "text-red-500";
                 const bgHighlight = isCorrect ? "" : "bg-red-50 -mx-2 px-2 rounded-xl"; 
                 
-                let reviewHTML = `
+                let itemHTML = `
                 <div class="mb-3 border-b border-blue-50 pb-2 ${bgHighlight}">
                     <p class="text-gray-800 text-base md:text-lg">Q${item.qNum}: ${item.question}</p>
                     <p class="${colorClass} text-lg md:text-xl mt-1">
                         ${icon} Your Answer: <span class="font-black">${item.studentAns || '(No answer)'}</span>
                     </p>`;
                 
+                // 對於答錯的題目，顯示正確答案
                 if (!isCorrect) {
-                    reviewHTML += `<p class="text-orange-500 text-base md:text-lg mt-1">💡 Try again to find the answer!</p>`;
+                    itemHTML += `<p class="text-green-600 text-base md:text-lg mt-1">
+                        💡 Correct Answer: <span class="font-black">${item.correctAns}</span>
+                    </p>`;
                 }
                 
-                reviewHTML += `</div>`;
-                reviewContainer.innerHTML += reviewHTML;
-            });
+                itemHTML += `</div>`;
+                return itemHTML;
+            }).join('');
+
+            reviewContainer.innerHTML = reviewHTML;
 
             // 4. 顯示排行榜
             const lbContainer = document.getElementById('leaderboard');
@@ -751,6 +756,39 @@
                 scoreElement.innerText = current;
             }, 20);
         }
+
+        // === 鍵盤事件監聽：按 Enter 跳下一題 ===
+        document.addEventListener('keydown', function(event) {
+            if (event.key !== 'Enter') return;
+
+            // 如果提示 Modal 是開啟的，按 Enter 等同於按 OK
+            const modal = document.getElementById('custom-modal');
+            if (!modal.classList.contains('hidden')) {
+                event.preventDefault();
+                closeModal();
+                return;
+            }
+
+            // 如果確認 Modal 是開啟的，不做任何事
+            const confirmModal = document.getElementById('confirm-modal');
+            if (!confirmModal.classList.contains('hidden')) {
+                return;
+            }
+
+            // 檢查是否在測驗畫面中
+            const quizSection = document.getElementById('quiz-section');
+            if (quizSection.style.display === 'block') {
+                event.preventDefault(); // 防止在填空題中按 Enter 觸發預設行為
+
+                const submitBtn = document.getElementById('submitBtn');
+                // 如果提交按鈕是可見的，代表是最後一題
+                if (!submitBtn.classList.contains('hidden')) {
+                    submitQuiz();
+                } else {
+                    nextQuestion();
+                }
+            }
+        });
     </script>
 </body>
 </html>
