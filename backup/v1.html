@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌟 MyView Online Quiz for 2 Sage 🌟</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Confetti for celebration effect -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        /* Cute rounded fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap');
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #eff6ff; /* blue-50 */
+            background-image: radial-gradient(#bfdbfe 2px, transparent 2px); /* blue-200 */
+            background-size: 30px 30px;
+        }
+
+        /* 自訂可愛捲軸 */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #eff6ff;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #93c5fd;
+            border-radius: 10px;
+            border: 2px solid #eff6ff;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b82f6;
+        }
+
+        .btn-cute { transition: all 0.1s; }
+        .btn-cute:active {
+            transform: translateY(8px);
+            box-shadow: 0 0 0 0 transparent !important;
+        }
+        .btn-cute:disabled {
+            background-color: #9ca3af !important;
+            box-shadow: 0 8px 0 0 #4b5563 !important;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* MCQ Options Effect */
+        .option-label {
+            transition: all 0.2s;
+        }
+        .option-input:checked + .option-label {
+            background-color: #dbeafe; /* blue-100 */
+            border-color: #3b82f6; /* blue-500 */
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Fill-in-the-blank Input Effect */
+        .fill-input {
+            border-bottom-width: 4px;
+            transition: all 0.2s;
+        }
+        .fill-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .hidden-section { display: none; }
+        
+        /* Floating Animation */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        /* 彈出視窗動畫 */
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .modal-animate { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- 隱藏欄位：用來接收從後端傳來的 Unit -->
+    <input type="hidden" id="currentUnitVal" value="<?= currentUnit ?>">
+
+    <!-- Main Container -->
+    <div class="max-w-4xl w-full bg-white rounded-[40px] shadow-2xl overflow-hidden border-8 border-white outline outline-8 outline-blue-200 p-6 md:p-10 relative">
+
+        <!-- ================= 1. Login Section ================= -->
+        <div id="login-section" class="text-center space-y-8">
+            <div class="text-6xl animate-float mb-4">🚀</div>
+            <h1 class="text-4xl md:text-5xl font-black text-blue-600 tracking-wide">✨MyView Online Quiz✨</h1>
+            
+            <div class="bg-cyan-50 rounded-3xl p-6 inline-block w-full max-w-md border-4 border-cyan-200">
+                <h2 class="text-2xl font-bold text-cyan-800 mb-2">🎯 Today's Mission:</h2>
+                <!-- Displays the Unit from URL -->
+                <p id="display-unit" class="text-4xl font-black text-blue-700 bg-white rounded-2xl py-2 shadow-inner"><?= currentUnit ?></p>
+            </div>
+
+            <div class="max-w-md mx-auto space-y-4">
+                <label class="block text-2xl font-bold text-gray-700 text-left pl-4">✏️ What's your name?</label>
+                <input type="text" id="studentName" placeholder="e.g., Tom" 
+                    class="w-full text-3xl font-bold px-6 py-4 rounded-3xl border-4 border-blue-200 focus:border-blue-500 focus:outline-none text-center shadow-inner text-gray-800 placeholder-gray-300">
+            </div>
+
+            <button id="startBtn" onclick="startQuiz()" 
+                class="btn-cute mt-8 bg-blue-500 hover:bg-blue-600 text-white shadow-[0_8px_0_0_#1d4ed8] rounded-full px-12 py-5 text-3xl font-black w-full max-w-md tracking-wider">
+                Let's GO! 🚀
+            </button>
+        </div>
+
+        <!-- ================= 2. Quiz Section ================= -->
+        <div id="quiz-section" class="hidden-section">
+            <div class="flex justify-between items-center mb-6 border-b-4 border-blue-100 pb-4">
+                <h2 id="quiz-title" class="text-3xl font-black text-blue-600"><?= currentUnit ?></h2>
+                <div class="text-2xl font-bold text-gray-500 bg-gray-100 px-4 py-2 rounded-2xl">
+                    👤 <span id="display-name">Student</span>
+                </div>
+            </div>
+
+            <div id="questions-container" class="space-y-10 mb-10">
+                <!-- Questions generated dynamically -->
+            </div>
+
+            <button id="submitBtn" onclick="submitQuiz()" 
+                class="btn-cute w-full bg-cyan-400 hover:bg-cyan-500 text-cyan-900 shadow-[0_8px_0_0_#0891b2] rounded-full px-8 py-5 text-3xl font-black tracking-wider">
+                🙌 I'm done! Submit
+            </button>
+        </div>
+
+        <!-- ================= 3. Result & Leaderboard Section ================= -->
+        <div id="result-section" class="hidden-section text-center">
+            <div id="feedback-emoji" class="text-7xl mb-4">🏆</div>
+            <h1 id="feedback-msg" class="text-4xl md:text-5xl font-black text-blue-600 mb-6">Great Job!</h1>
+            
+            <div class="bg-blue-50 rounded-[30px] p-8 border-4 border-blue-200 mb-8 inline-block w-full max-w-md">
+                <p class="text-2xl text-blue-800 font-bold mb-2">Your Score</p>
+                <p id="final-score" class="text-8xl font-black text-red-500 drop-shadow-md">0</p>
+                <p id="correct-count" class="text-xl text-blue-700 font-bold mt-4 bg-white rounded-full py-2 shadow-sm border-2 border-blue-100"></p>
+            </div>
+
+            <!-- 將 grid 改為 flex-col 讓區塊可以滿版延伸 -->
+            <div class="flex flex-col gap-8 text-left w-full">
+                <!-- Review Answers (滿版) -->
+                <div class="bg-white rounded-3xl p-6 border-4 border-blue-100 shadow-md w-full">
+                    <h3 class="text-2xl font-black text-blue-800 mb-4 border-b-2 border-blue-100 pb-2">📝 Review</h3>
+                    <div id="review-container" class="space-y-4 max-h-[500px] overflow-y-auto pr-4 text-xl font-bold">
+                    </div>
+                </div>
+
+                <!-- Leaderboard (滿版) -->
+                <div class="bg-indigo-50 rounded-3xl p-6 border-4 border-indigo-100 shadow-md flex flex-col w-full">
+                    <h3 class="text-2xl font-black text-indigo-800 mb-4 border-b-2 border-indigo-200 pb-2">👑 Leaderboard</h3>
+                    <ul id="leaderboard" class="space-y-3 text-xl font-bold text-gray-700 max-h-[500px] overflow-y-auto pr-4">
+                    </ul>
+                </div>
+            </div>
+
+            <button id="retry-btn" onclick="location.reload()" 
+                class="btn-cute mt-10 bg-indigo-400 hover:bg-indigo-500 text-white shadow-[0_8px_0_0_#4338ca] rounded-full px-10 py-4 text-2xl font-black inline-block">
+                🔄 Play Again
+            </button>
+        </div>
+
+    </div>
+
+    <!-- ================= 客製化可愛彈出視窗 Modal ================= -->
+    <div id="custom-modal" class="fixed inset-0 bg-blue-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-[30px] p-8 max-w-sm w-full text-center shadow-2xl border-4 border-blue-200 modal-animate">
+            <div id="modal-icon" class="text-6xl mb-4">🐻</div>
+            <h3 id="modal-title" class="text-3xl font-black text-blue-600 mb-3">Oops!</h3>
+            <p id="modal-message" class="text-xl text-gray-600 mb-8 font-bold leading-relaxed">Message here</p>
+            <button onclick="closeModal()" class="btn-cute bg-blue-500 hover:bg-blue-600 text-white rounded-full px-8 py-3 text-2xl font-black w-full shadow-[0_6px_0_0_#1d4ed8]">
+                OK!
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        let currentUnit = document.getElementById('currentUnitVal').value;
+        let currentStudentName = "";
+        let questionsData = [];
+        let modalCallback = null;
+
+        // === 客製化彈出視窗控制 ===
+        function showModal(msg, icon = '🐻', title = 'Oops!', callback = null) {
+            document.getElementById('modal-icon').innerText = icon;
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-message').innerText = msg;
+            document.getElementById('custom-modal').classList.remove('hidden');
+            modalCallback = callback;
+        }
+
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+            if (modalCallback) {
+                modalCallback();
+                modalCallback = null; // 執行後清除
+            }
+        }
+
+        // === 1. Start Quiz ===
+        function startQuiz() {
+            const nameInput = document.getElementById('studentName').value.trim();
+            
+            if (!nameInput) {
+                showModal('🐻 Oops! Please enter your name first!');
+                document.getElementById('studentName').focus();
+                return;
+            }
+
+            currentStudentName = nameInput;
+            document.getElementById('display-name').innerText = currentStudentName;
+
+            // Change button state
+            const startBtn = document.getElementById('startBtn');
+            startBtn.innerText = "Loading... ⏳";
+            startBtn.disabled = true;
+
+            // ==========================================
+            // GAS Integration Note: Replace with:
+            // google.script.run.withSuccessHandler(renderQuiz).getQuestions(currentUnit);
+            // ==========================================
+            
+            // Simulating backend delay
+            // 🛑 原本的模擬寫法 (請刪除或註解掉)：
+            // setTimeout(() => {
+            //     const mockQuestions = getMockQuestions(currentUnit);
+            //     renderQuiz(mockQuestions);
+            // }, 800);
+
+            // ✅ 改成呼叫 GAS：
+            google.script.run
+              .withSuccessHandler(renderQuiz)
+                .withFailureHandler(function(err) {
+                    showModal('Error: ' + err.message, '🔧', 'System Error');
+                    startBtn.innerText = "Let's GO! 🚀";
+                    startBtn.disabled = false;
+                })
+              .getQuestions(currentUnit);
+
+        }
+
+        // === 2. Render Questions ===
+        function renderQuiz(data) {
+            // 防呆：如果 Sheet 中沒有這個 Unit 的資料
+            if (!data || data.length === 0) {
+                showModal(
+                    `We couldn't find questions for "${currentUnit}". Please check the URL or ask your teacher!`, 
+                    '🔍', 
+                    'Unit Not Found',
+                    () => { location.reload(); } // 按下 OK 後重新整理
+                );
+                return;
+            }
+
+            questionsData = data;
+            const container = document.getElementById('questions-container');
+            container.innerHTML = "";
+
+            data.forEach((q, index) => {
+                const qNum = index + 1;
+                let qHTML = `
+                <div class="bg-blue-50/50 rounded-3xl p-6 border-4 border-blue-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 bg-blue-500 text-white font-black text-xl px-4 py-2 rounded-br-2xl">Q${qNum}</div>
+                    <p class="text-3xl font-bold text-gray-800 mt-6 mb-6 leading-relaxed">${q.question}</p>
+                `;
+
+                if (q.type === 'MCQ') {
+                    // Multiple Choice
+                    qHTML += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+                    q.options.forEach((opt, optIndex) => {
+                        const optId = `q${index}_opt${optIndex}`;
+                        qHTML += `
+                        <div class="relative">
+                            <input type="radio" name="ans_${index}" id="${optId}" value="${opt}" class="option-input peer sr-only">
+                            <label for="${optId}" class="option-label block w-full text-2xl font-bold text-gray-700 bg-white border-4 border-blue-100 rounded-2xl p-4 cursor-pointer hover:bg-blue-50 text-center">
+                                ${opt}
+                            </label>
+                        </div>`;
+                    });
+                    qHTML += `</div>`;
+                } else if (q.type === 'Fill') {
+                    // Fill in the blank
+                    qHTML += `
+                    <div class="mt-4 text-center">
+                        <input type="text" id="ans_${index}" placeholder="Type here..." autocomplete="off"
+                            class="fill-input w-full md:w-2/3 text-3xl font-bold px-4 py-3 bg-white border-2 border-transparent border-b-blue-200 text-center text-blue-600 focus:border-b-blue-500 rounded-t-xl transition-all">
+                    </div>`;
+                }
+
+                qHTML += `</div>`;
+                container.innerHTML += qHTML;
+            });
+
+            // Switch view
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('quiz-section').style.display = 'block';
+        }
+
+        // === 3. Submit Answers ===
+        function submitQuiz() {
+            const submitBtn = document.getElementById('submitBtn');
+            let studentAnswers = [];
+            let isAllAnswered = true;
+
+            questionsData.forEach((q, index) => {
+                let ans = "";
+                if (q.type === 'MCQ') {
+                    const selected = document.querySelector(`input[name="ans_${index}"]:checked`);
+                    if (selected) ans = selected.value;
+                } else if (q.type === 'Fill') {
+                    ans = document.getElementById(`ans_${index}`).value.trim();
+                }
+                if (!ans) isAllAnswered = false;
+                studentAnswers.push(ans);
+            });
+
+            // 防呆：強制要求所有題目都必須作答才能交卷
+            if (!isAllAnswered) {
+                showModal("You haven't answered all questions! Please fill them all in.", "🦊", "Wait!");
+                return; // 直接阻斷，不讓送出
+            }
+
+            submitBtn.innerText = "Grading... 📝";
+            submitBtn.disabled = true;
+
+            const payload = {
+                name: currentStudentName,
+                unit: currentUnit,
+                answers: studentAnswers
+            };
+
+            // ==========================================
+            // GAS Integration Note: Replace with:
+            // google.script.run.withSuccessHandler(showResults).submitAnswers(payload);
+            // ==========================================
+
+            // Simulate grading backend
+            // 🛑 原本的模擬寫法 (請刪除或註解掉)：
+            // setTimeout(() => {
+            //     const mockResult = mockGradeQuiz(payload);
+            //     showResults(mockResult);
+            // }, 1000);
+
+            // ✅ 改成呼叫 GAS：
+            google.script.run
+              .withSuccessHandler(showResults)
+                .withFailureHandler(function(err) {
+                    showModal('Error: ' + err.message, '🔧', 'System Error');
+                    submitBtn.innerText = "🙌 I'm done! Submit";
+                    submitBtn.disabled = false;
+                })
+              .submitAnswers(payload);
+        }
+
+        // === 4. Show Results & Leaderboard ===
+        function showResults(resultData) {
+            // Switch view
+            document.getElementById('quiz-section').style.display = 'none';
+            document.getElementById('result-section').style.display = 'block';
+
+            // Confetti Effect (Blue/Cyan/Indigo tones)
+            confetti({
+                particleCount: 150, spread: 70, origin: { y: 0.6 },
+                colors: ['#3b82f6', '#06b6d4', '#6366f1', '#93c5fd']
+            });
+
+            // Score Animation
+            animateScore(resultData.score);
+
+            // 1. & 2. 設定評語與正確題數
+            const totalQs = resultData.details.length;
+            const correctQs = resultData.details.filter(d => d.correct).length;
+            document.getElementById('correct-count').innerText = `✅ Correct: ${correctQs} / ${totalQs}`;
+
+            const feedbackMsg = document.getElementById('feedback-msg');
+            const feedbackEmoji = document.getElementById('feedback-emoji');
+            const retryBtn = document.getElementById('retry-btn');
+            
+            if (resultData.score === 100) {
+                feedbackMsg.innerText = "Perfect! Amazing! 🎉";
+                feedbackEmoji.innerText = "🌟🏆🌟";
+                retryBtn.innerText = "🔄 Play Again";
+            } else if (resultData.score >= 80) {
+                feedbackMsg.innerText = "Great Job! 👏";
+                feedbackEmoji.innerText = "🏆";
+                retryBtn.innerText = "🔄 Try Again";
+            } else if (resultData.score >= 60) {
+                feedbackMsg.innerText = "Good Effort! 👍";
+                feedbackEmoji.innerText = "✨";
+                retryBtn.innerText = "🔄 Try Again";
+            } else {
+                feedbackMsg.innerText = "Keep Trying! 💪";
+                feedbackEmoji.innerText = "🦊";
+                feedbackMsg.classList.replace('text-blue-600', 'text-orange-500'); 
+                retryBtn.innerText = "🔄 Try Again";
+            }
+
+            // 3. 排序 Review (答錯的在前) 並且保留原始題號
+            const reviewContainer = document.getElementById('review-container');
+            reviewContainer.innerHTML = "";
+            
+            // 先加上題號，再依照正確與否排序 (false 放前面)
+            const sortedDetails = resultData.details
+                .map((item, idx) => ({ ...item, qNum: idx + 1 }))
+                .sort((a, b) => (a.correct === b.correct) ? 0 : a.correct ? 1 : -1);
+
+            sortedDetails.forEach((item) => {
+                const isCorrect = item.correct;
+                const icon = isCorrect ? "✅" : "❌";
+                const colorClass = isCorrect ? "text-green-500" : "text-red-500";
+                const bgHighlight = isCorrect ? "" : "bg-red-50 -mx-2 px-2 rounded-xl"; 
+                
+                let reviewHTML = `
+                <div class="mb-3 border-b border-blue-50 pb-2 ${bgHighlight}">
+                    <p class="text-gray-800 text-lg">Q${item.qNum}: ${item.question}</p>
+                    <p class="${colorClass} text-xl mt-1">
+                        ${icon} Your Answer: <span class="font-black">${item.studentAns || '(No answer)'}</span>
+                    </p>`;
+                
+                if (!isCorrect) {
+                    // 不再顯示正確答案，引導學生再挑戰一次
+                    reviewHTML += `<p class="text-orange-500 text-lg mt-1">💡 Try again to find the answer!</p>`;
+                }
+                
+                reviewHTML += `</div>`;
+                reviewContainer.innerHTML += reviewHTML;
+            });
+
+            // 4. 顯示排行榜
+            const lbContainer = document.getElementById('leaderboard');
+            lbContainer.innerHTML = "";
+            resultData.leaderboard.forEach((user, idx) => {
+                let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "✨";
+                // Highlight current user
+                let bgClass = user.name === currentStudentName ? "bg-indigo-100 border-2 border-indigo-300 rounded-xl px-2 -mx-2" : "";
+                
+                lbContainer.innerHTML += `
+                <li class="flex justify-between items-center ${bgClass} py-1 px-4">
+                    <span>${medal} ${user.name}</span>
+                    <span class="font-black text-2xl text-indigo-600">${user.score}</span>
+                </li>`;
+            });
+        }
+
+        // Score Counter Animation
+        function animateScore(targetScore) {
+            let current = 0;
+            const scoreElement = document.getElementById('final-score');
+            const interval = setInterval(() => {
+                current += 2;
+                if (current >= targetScore) {
+                    current = targetScore;
+                    clearInterval(interval);
+                }
+                scoreElement.innerText = current;
+            }, 20);
+        }
+    </script>
+</body>
+</html>
